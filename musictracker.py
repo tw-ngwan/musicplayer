@@ -1,6 +1,7 @@
 import os
 import openpyxl
 from openpyxl.styles import Font
+import sqlite3
 
 filename = 'C:/Users/Tengwei/Desktop/Music/MusicStats.xlsx'
 directory = 'C:/Users/Tengwei/Desktop/Music'

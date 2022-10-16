@@ -2,21 +2,24 @@ from pytube import YouTube
 from pytube.exceptions import RegexMatchError
 import sys
 from settings import ytdownloader_usage
+from backend_implementations import input_parse
 
 
 # The main function in ytdownloader that gets user input and downloads all videos
-def get_all_videos():
+def main():
     if len(sys.argv) < 2:
         print(ytdownloader_usage)
-        sys.exit()
-    elif sys.argv[1].lower() == 'a' and len(sys.argv) == 2:
-        video_links = links_parse()
+        return
+
+    if sys.argv[1].lower() == 'a' and len(sys.argv) == 2:
+        video_links = input_parse(name="links", function="download")
     elif sys.argv[1].lower() == 't' and len(sys.argv) == 3:
         video_links = text_parse()
     else:
         print("No such function!")
         print(ytdownloader_usage)
-        sys.exit()
+        return
+
     download_all_videos(video_links)
 
 
@@ -32,14 +35,6 @@ def text_parse() -> list[str]:
             return links
     except FileNotFoundError:
         print("Can't open document!")
-
-
-# Gets all links to be downloaded
-def links_parse():
-    links_string = input("Copy the links you want to download, separated by a space \n")
-    links = links_string.split()
-    print("Added all links")
-    return links
 
 
 # Downloads all videos with their urls
@@ -61,4 +56,4 @@ def download_video(url: str, outpath: str="./"):
 
 
 if __name__ == "__main__":
-    get_all_videos()
+    main()

@@ -1,70 +1,71 @@
-import os, sys, time, pyinputplus as pyip
-
+import os
+import sys
+import pyinputplus as pyip
 from moviepy.editor import VideoFileClip
+from backend_implementations import input_parse
+from settings import musicconverter_usage
 
-os.chdir("C:/Users/Tengwei/Downloads")
 
-usage = """Usage: This programme will be able to either convert individual video files into audio (with their names), 
-or convert all video files within a certain period into audio files. If not specified, this will automatically be taken to be 1 day. 
-Key in py musicconverter.py n for the first, and py musicconverter.py t <time, in hours> for the second. For the first, 
-you will be prompted to key in the names. Separate them by a space. 
-"""
-
-directory = 'C:/Users/Tengwei/Downloads'
-
+# The main function that is called
 def main():
+    # Handling incorrect usage
     if len(sys.argv) < 2:
-        print(usage)
-    elif sys.argv[1].lower() == "n":
-        convert_files_with_name()
-    elif sys.argv[1].lower() == "t":
-        if len(sys.argv) == 2:
-            time_to_subtract = 86400
-        else:
-            time_to_subtract = sys.argv[2] * 3600
-        convert_files_with_time(time_to_subtract)
+        print(musicconverter_usage)
+        return
+    # Convert video by video
+    if sys.argv[1] == 'v':
+        video_names = input_parse(name="video names", function="convert")
+        for video in video_names:
+            convert_video_to_audio(video)
+        print("All video files converted")
+    # Convert by folder
+    elif sys.argv[1] == 'f' and len(sys.argv) >= 3:
+        input_dir = sys.argv[2]
+        output_dir = input_dir if len(sys.argv) == 3 else sys.argv[3]
+        convert_all_videos_to_audios(input_dir=input_dir, output_dir=output_dir)
+        os.chdir(input_dir)  # For deleting video files
     else:
         print("No such function!")
-        print(usage)
-        sys.exit()
+        print(musicconverter_usage)
+        return
+
+    # Checks whether user wants to delete
+    delete_choice = pyip.inputYesNo("Do you want to delete the video files?")
+    if delete_choice == 'yes':
+        delete_video_files('.')
+    return
 
 
-def convert_files_with_name():
-    files_string = input("Copy the links you want to download, separated by a space \n")
-    video_files = files_string.split()
-    convert_video_to_audio(video_files)
-    print("All video files converted!")
+# Converts a video file to audio file
+def convert_video_to_audio(video_file: str, output_ext: str = "mp3", input_dir: str = '.', output_dir: str = '.'):
+    os.chdir(input_dir)
+    filename, ext = os.path.splitext(video_file)
+    clip = VideoFileClip(video_file)
+    # Saves file to a new directory
+    os.chdir(output_dir)
+    clip.audio.write_audiofile(f"{filename}.{output_ext}")
 
 
-def convert_files_with_time(time_to_subtract):
-    current_time = time.time()
-    video_files = []
-    backdated_time = current_time - time_to_subtract
-    for file in os.listdir(directory):
-        if file.endswith('.mp4') and os.path.getctime(f'{directory}/{file}') >= backdated_time:
-            video_files.append(file)
-            print(file)
+# Converts all videos in input dir into output
+def convert_all_videos_to_audios(input_dir: str = '.', output_dir: str = ''):
+    # Check if output_dir is given
+    if output_dir == '':
+        output_dir = input_dir
 
-    convert_video_to_audio(video_files)
-    print("All video files converted!")
+    video_files = [file for file in os.listdir('.') if file.endswith('.mp4')]
+    # Converts all video files
+    for file in video_files:
+        convert_video_to_audio(file, input_dir=input_dir, output_dir=output_dir)
+    print("ALl video files converted")
 
 
-def convert_video_to_audio(video_files):
-    os.chdir(directory)
-    for video_file in video_files:
-        filename, ext = os.path.splitext(video_file)
-
-        clip = VideoFileClip(video_file)
-        clip.audio.write_audiofile(f"{filename}.mp3", verbose=False, progress_bar=False)
-        clip.__del__()
-        print("Video file converted!")
-
-    delete_file_choice = pyip.inputYesNo("Do you want to delete the video files?")
-    if delete_file_choice == 'yes':
-        for video_file in video_files:
-            os.remove(video_file)
-        print("All video files deleted!")
+# Deletes all video files in directory
+def delete_video_files(dir='.'):
+    video_files = [file for file in os.listdir('.') if file.endswith('.mp4')]
+    for file in video_files:
+        os.remove(file)
+    print("All video files deleted")
 
 
 if __name__ == "__main__":
-    convert_video_to_audio([r'C:\Users\Tengwei\Downloads\pianomusic2h.mp4'])
+    main()
