@@ -2,8 +2,9 @@ import os
 import sys
 import pyinputplus as pyip
 from moviepy.editor import VideoFileClip
+import sqlite3
 from backend_implementations import input_parse
-from settings import musicconverter_usage
+from settings import musicconverter_usage, database_name
 
 
 # The main function that is called
@@ -65,6 +66,20 @@ def delete_video_files(dir='.'):
     for file in video_files:
         os.remove(file)
     print("All video files deleted")
+
+
+# Inserts list of new audio into sqlite database
+def insert_new_audio(audio_files: list[str], genre: str):
+    data = [(audio_file, genre, 20) for audio_file in audio_files]
+    with sqlite3.connect(database_name) as con:
+        cur = con.cursor()
+        cur.executemany(
+            """
+            INSERT INTO music
+            (title, genre, score)
+            VALUES (?, ?, ?)
+            """, data
+        )
 
 
 if __name__ == "__main__":

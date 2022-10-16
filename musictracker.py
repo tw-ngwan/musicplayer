@@ -2,40 +2,56 @@ import os
 import openpyxl
 from openpyxl.styles import Font
 import sqlite3
+from settings import database_name
 
 filename = 'C:/Users/Tengwei/Desktop/Music/MusicStats.xlsx'
 directory = 'C:/Users/Tengwei/Desktop/Music'
 
 
-def get_music_score(songname):
-    global filename
-    wb = openpyxl.load_workbook(filename)
-
-    for sheetname in wb.sheetnames:
-        sheet = wb[sheetname]
-        for row in range(3, sheet.max_row + 1):
-            if sheet.cell(row=row, column=2).value == songname:
-                print(sheet.cell(row=row, column=3).value)
-                return sheet.cell(row=row, column=3).value
-
-    wb.close()
-
-
-def change_music_score(songname, score):
-    global filename
-    wb = openpyxl.load_workbook(filename)
-
-    for sheetname in wb.sheetnames:
-        sheet = wb[sheetname]
-        for row in range(3, sheet.max_row + 1):
-            if sheet.cell(row=row, column=2).value == songname:
-                sheet.cell(row=row, column=3).value += score
-                print("Added score")
-
-    wb.save(filename)
-    wb.close()
+# Gets the music score
+def get_music_score(song_name: str) -> int:
+    with sqlite3.connect(database_name) as con:
+        cur = con.cursor()
+        cur.execute(
+            """
+            SELECT score 
+              FROM music
+             WHERE title = ?""",
+            (song_name, )
+        )
+        score = cur.fetchall()[0][0]
+    return score
 
 
+# Changes the score of a piece of music
+def change_music_score(song_name: str, score: int):
+    with sqlite3.connect(database_name) as con:
+        cur = con.cursor()
+        cur.execute(
+            """
+            UPDATE music
+               SET score = ?
+             WHERE title = ?""",
+            (score, song_name)
+        )
+
+
+# Gets the average score of a genre
+def get_average_score(genre: str) -> int:
+    with sqlite3.connect(database_name) as con:
+        cur = con.cursor()
+        cur.execute(
+            """
+            SELECT AVG(score) 
+              FROM music 
+             WHERE genre = ?
+            """, (genre, )
+        )
+        average = cur.fetchall()[0][0]
+    return average
+
+
+# Not sure how this is used currently
 def update_music_list():
     # Adds the new songs added. If a whole new genre is added it creates a new sheet for the genre
     global filename
@@ -71,20 +87,6 @@ def update_music_list():
 
     wb.save(filename)
     wb.close()
-
-
-def get_average_score(sheetname):
-    global filename
-    wb = openpyxl.load_workbook(filename)
-
-    total_score = 0
-    sheet = wb[sheetname]
-    for row in range(3, sheet.max_row + 1):
-        total_score += sheet.cell(row=row, column=3).value
-
-    average_score = round(total_score / (sheet.max_row - 2), 3) if sheet.max_row > 2 else 20
-    wb.close()
-    return average_score
 
 
 if __name__ == "__main__":
