@@ -143,7 +143,8 @@ class MusicMenu:
         scrollbar_y.config(command=self.genreslist.yview)
         self.genreslist.pack(fill=tk.BOTH)
 
-        genres_list = [genre for genre in os.listdir('./audios') if os.path.isdir(genre)]
+        genres_list = [genre for genre in os.listdir('./audios') if os.path.isdir(f"./audios/{genre}")]
+
         for genre in genres_list:
             self.genreslist.insert(tk.END, genre)
 
@@ -276,9 +277,8 @@ class MusicPlayer:
         scrollbar_y.config(command=self.playlist.yview)
         self.playlist.pack(fill=tk.BOTH)
 
-        # New code
         # Applying horizontal scrollbar to listbox
-        scrollbar_x.pack(side=tk.LEFT, fill=tk.X)
+        scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X)
         scrollbar_x.config(command=self.playlist.xview)
         self.playlist.pack(fill=tk.BOTH)
 
@@ -294,17 +294,20 @@ class MusicPlayer:
         # self._calibrate_videoslider()
 
         # Changing Directory for fetching Songs. Two options, either all songs, or selected
-        if user_choice.lower() == 'all':
+        if self.user_choice.lower() == 'all':
             songtracks_list = []
             for roots, dirs, files in os.walk('.'):
                 songtracks_list.append([roots, files])
             for songtracks in songtracks_list:
                 for track in songtracks[1]:
-                    self.playlist.insert(tk.END, f"{songtracks[0]}/{track}")
+                    if track.startswith('./venv'):
+                        continue
+                    if track.endswith('.mp3'):
+                        self.playlist.insert(tk.END, f"{songtracks[0]}/{track}")
 
         else:
-            os.chdir(f"./{user_choice}")
-            songtracks = os.listdir()
+            songtracks = os.listdir(f"./audios/{user_choice}")
+            print(songtracks)
             sorted_songtracks = sorted(songtracks, key=musictracker.get_music_score, reverse=True)  # This doesn't work
             print(sorted_songtracks)
             for track in sorted_songtracks:
@@ -334,15 +337,21 @@ class MusicPlayer:
         self.playlist.selection_set(song_index)
         self.playlist.activate(song_index)
         # Loading Selected Song
-        pygame.mixer.music.load(song)
+        if self.user_choice.lower() != 'all':
+            pygame.mixer.music.load(f'./audios/{self.user_choice}/{song}')
+        else:
+            pygame.mixer.music.load(song)
         # Playing Selected Song
         pygame.mixer.music.play(start=0)
         # Adding 1 point to song
         musictracker.change_music_score(song, 1)
 
-        song_length = int(pygame.mixer.Sound(song).get_length() * 1000)
+        if self.user_choice.lower() != 'all':
+            song_length = int(pygame.mixer.Sound(f'./audios/{self.user_choice}/{song}').get_length() * 1000)
+        else:
+            song_length = int(pygame.mixer.Sound(song).get_length() * 1000)
         self._calibrate_videoslider(song_length=song_length // 1000)
-        print(autoplay_music)
+        print(f'{autoplay_music}: {autoplay_music_commands[autoplay_music]}')
 
         # These are the 4 possible modes available for the user
         def autoplay(songindex):
