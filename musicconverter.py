@@ -44,7 +44,9 @@ def convert_video_to_audio(video_file: str, output_ext: str = "mp3", input_dir: 
     clip = VideoFileClip(video_file)
     # Saves file to a new directory
     os.chdir(output_dir)
-    clip.audio.write_audiofile(f"{filename}.{output_ext}")
+    audio_filename = f"{filename}.{output_ext}"
+    clip.audio.write_audiofile(audio_filename)
+    return audio_filename
 
 
 # Converts all videos in input dir into output
@@ -54,10 +56,14 @@ def convert_all_videos_to_audios(input_dir: str = '.', output_dir: str = ''):
         output_dir = input_dir
 
     video_files = [file for file in os.listdir('.') if file.endswith('.mp4')]
+    audio_filenames = []
     # Converts all video files
     for file in video_files:
-        convert_video_to_audio(file, input_dir=input_dir, output_dir=output_dir)
+        audio_file = convert_video_to_audio(file, input_dir=input_dir, output_dir=output_dir)
+        audio_filenames.append(audio_file)
+
     print("ALl video files converted")
+    return audio_filenames
 
 
 # Deletes all video files in directory

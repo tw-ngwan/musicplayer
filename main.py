@@ -6,6 +6,7 @@ import threading
 from mttkinter import mtTkinter as tk
 import random
 import pygame
+import sqlite3
 
 import ytdownloader
 import musicconverter
@@ -29,8 +30,8 @@ def main():
 
 # This will be used to determine whether music is on autoplay, repeat, random, or none (0).
 autoplay_music = 0
-"""If autoplay_music == 0, normal. If autoplay_music == 1, autoplays based on index. 
-If autoplay_music == 2, repeats the current song consistently. If autoplay_music == 3, autoplays at random."""
+autoplay_music_commands = ["Plays song normally", "Autoplays according to the list",
+                           "Repeats current song", "Autoplays randomly"]
 
 # This will be used to start the thread
 started_player = False
@@ -58,7 +59,7 @@ def open_threading_music_player():
 # Returns music genres
 def get_music_genres():
     music_genres = []
-    directory = 'C:/Users/Tengwei/Desktop/Music'
+    directory = './audios'
     for file in os.listdir(directory):
         if os.path.isdir(f'{directory}/{file}'):
             music_genres.append(file)
@@ -88,9 +89,9 @@ def get_instructions(music_genres, basic_instructions):
 # Actual function creating the music player
 def open_music_player():
     root = tk.Tk()
-    musicMenu = MusicMenu(root)
+    music_menu = MusicMenu(root)
     root.mainloop()
-    return musicMenu
+    return music_menu
 
 
 # Used to change whether music is autoplaying (and thus, whether musicplayer hangs)
@@ -106,7 +107,7 @@ def change_autoplay_bool():
                 print("Exiting music player...")
                 break
             autoplay_music = (autoplay_music + 1) % 4
-            print(autoplay_music)
+            print(f'{autoplay_music}: {autoplay_music_commands[autoplay_music]}')
         else:
             time.sleep(1)
 
@@ -141,9 +142,9 @@ class MusicMenu:
         buttonframe.place(x=0, y=100, width=500, height=100)
 
         # Creating select button
-        selectbtn = tk.Button(buttonframe, text="Select", command=self.select_genre,
-                              width=10, height=1, font=("arial", 16, "bold"),
-                              fg="navyblue", bg="#90ee90").grid(row=0, column=0, padx=10, pady=5)
+        tk.Button(buttonframe, text="Select", command=self.select_genre,
+                  width=10, height=1, font=("arial", 16, "bold"),
+                  fg="navyblue", bg="#90ee90").grid(row=0, column=0, padx=10, pady=5)
 
         # Creating Genres Frame
         genresframe = tk.LabelFrame(self.root, text="Song Genres", font=("arial", 15, "bold"), bg="gold",
@@ -178,20 +179,15 @@ class MusicMenu:
         self.root.destroy()
         return current_genre
 
+    # Selects a genre to start playing songs
     def select_genre(self):
         global started_player
         global loop_enter
         current_genre = self.return_genre()
+
+        # If the user wants to add songs
         if current_genre == "Add Song":
-            music_genres = get_music_genres()
-            ytdownloader.links_parse()
-            musicconverter.convert_files_with_time(86400)
-            add_to_folder_instructions = get_instructions(music_genres, 'add songs')
-            numbered_choice_folder = pyip.inputInt(add_to_folder_instructions, min=1, max=len(music_genres)) - 1
-            user_choice_folder = music_genres[numbered_choice_folder]
-            move_music_files(user_choice_folder)
-            musictracker.update_music_list()
-            print("All files added!")
+            self.add_song()
             loop_enter = False
         else:
             started_player = True
@@ -199,6 +195,35 @@ class MusicMenu:
             # print(current_genre)
             musicPlayer = MusicPlayer(new_root, current_genre)
             new_root.mainloop()
+
+    # Adds a new song
+    def add_song(self):
+        # Gets all music genres
+        music_genres = get_music_genres()
+
+        # Downloads all videos
+        video_links = ytdownloader.input_parse(name="links", function="download")
+        ytdownloader.download_all_videos(video_links, outpath="./tempvideos")
+
+        # Gets user's choice genre
+        add_to_folder_instructions = get_instructions(music_genres, 'add songs')
+        choice_folder = pyip.inputInt(add_to_folder_instructions, min=1, max=len(music_genres)) - 1
+        user_choice_folder = music_genres[choice_folder]
+
+        # Converts all videos to audios
+        audio_filenames = musicconverter.convert_all_videos_to_audios(input_dir='./tempvideos',
+                                                                      output_dir=f'./audios/{user_choice_folder}')
+
+        # Checks if user wants to delete video files
+        delete_choice = pyip.inputYesNo("Do you want to delete the video files?")
+        if delete_choice == 'yes':
+            musicconverter.delete_video_files('./tempvideos')
+
+        # Inserts all audio into sqlite3
+        musicconverter.insert_new_audio(audio_filenames, user_choice_folder)
+
+        print("All files added!")
+        return
 
 
 class MusicPlayer:
@@ -223,45 +248,57 @@ class MusicPlayer:
         trackframe = tk.LabelFrame(self.root, text="Song Track", font=("arial", 15, "bold"), bg="Navyblue",
                                    fg="white", bd=5, relief=tk.GROOVE)
         trackframe.place(x=0, y=0, width=600, height=100)
+
         # Inserting the songtrack label
-        songtrack = tk.Label(trackframe, textvariable=self.track, width=20, font=("arial", 24, "bold"),
-                             bg="Orange", fg="Gold").grid(row=0, column=0, padx=10, pady=5)
+        tk.Label(trackframe, textvariable=self.track, width=20, font=("arial", 24, "bold"),
+                 bg="Orange", fg="Gold").grid(row=0, column=0, padx=10, pady=5)
+
         # Inserting Status Label
-        trackstatus = tk.Label(trackframe, textvariable=self.status, font=("arial", 24, "bold"),
-                               bg="Orange", fg="Gold").grid(row=0, column=1, padx=10, pady=5)
+        tk.Label(trackframe, textvariable=self.status, font=("arial", 24, "bold"),
+                 bg="Orange", fg="Gold").grid(row=0, column=1, padx=10, pady=5)
 
         # Creating button frame
         buttonframe = tk.LabelFrame(self.root, text="Control Panel", font=("arial", 15, "bold"), bg="grey",
                                     fg="white", bd=5, relief=tk.GROOVE)
         buttonframe.place(x=0, y=100, width=600, height=100)
         # Inserting Play Button
-        playbtn = tk.Button(buttonframe, text="Play", command=lambda: self.playsong(self.playlist.curselection()[0]),
-                            width=8, height=1,
-                            font=("arial", 16, "bold"), fg="navyblue", bg="#90ee90").grid(row=0, column=0, padx=10,
-                                                                                          pady=5)
+        tk.Button(buttonframe, text="Play", command=lambda: self.playsong(self.playlist.curselection()[0]),
+                  width=8, height=1,
+                  font=("arial", 16, "bold"), fg="navyblue", bg="#90ee90").grid(row=0, column=0, padx=10,
+                                                                                pady=5)
         # Inserting Pause Button
-        pausebtn = tk.Button(buttonframe, text="Pause", command=self.pausesong, width=8, height=1,
-                             font=("arial", 16, "bold"), fg="navyblue", bg="orange").grid(row=0, column=1, padx=10,
-                                                                                          pady=5)
+        tk.Button(buttonframe, text="Pause", command=self.pausesong, width=8, height=1,
+                  font=("arial", 16, "bold"), fg="navyblue", bg="orange").grid(row=0, column=1, padx=10,
+                                                                               pady=5)
         # Inserting Return Button
-        returnbtn = tk.Button(buttonframe, text="Return", command=self.return_to_menu, width=8, height=1,
-                              font=("arial", 16, "bold"), fg="navyblue", bg="red").grid(row=0, column=3, padx=10,
-                                                                                        pady=5)
+        tk.Button(buttonframe, text="Return", command=self.return_to_menu, width=8, height=1,
+                  font=("arial", 16, "bold"), fg="navyblue", bg="red").grid(row=0, column=3, padx=10,
+                                                                            pady=5)
 
         # Creating Playlist Frame
         songsframe = tk.LabelFrame(self.root, text="Song Playlist", font=("arial", 15, "bold"), bg="gold",
                                    fg="white", bd=5, relief=tk.GROOVE)
         songsframe.place(x=600, y=0, width=400, height=300)
+
         # Inserting scrollbar
         scrollbar_y = tk.Scrollbar(songsframe, orient=tk.VERTICAL)
+        # Inserting horizontal scrollbar
+        scrollbar_x = tk.Scrollbar(songsframe, orient=tk.HORIZONTAL)
+
         # Inserting Playlist listbox
-        self.playlist = tk.Listbox(songsframe, yscrollcommand=scrollbar_y.set, selectbackground="gold",
-                                   selectmode=tk.SINGLE,
+        self.playlist = tk.Listbox(songsframe, yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set,
+                                   selectbackground="gold", selectmode=tk.SINGLE,
                                    font=("arial", 12, "bold"), bg="silver", fg="navyblue", bd=5, relief=tk.GROOVE)
 
         # Applying Scrollbar to listbox
         scrollbar_y.pack(side=tk.RIGHT, fill=tk.Y)
         scrollbar_y.config(command=self.playlist.yview)
+        self.playlist.pack(fill=tk.BOTH)
+
+        # New code
+        # Applying horizontal scrollbar to listbox
+        scrollbar_x.pack(side=tk.LEFT, fill=tk.X)
+        scrollbar_x.config(command=self.playlist.xview)
         self.playlist.pack(fill=tk.BOTH)
 
         # Creating volume slider
@@ -277,7 +314,6 @@ class MusicPlayer:
 
         # Changing Directory for fetching Songs. Two options, either all songs, or selected
         if user_choice.lower() == 'all':
-            os.chdir(f"C:/Users/Tengwei/Desktop/Music")
             songtracks_list = []
             for roots, dirs, files in os.walk('.'):
                 songtracks_list.append([roots, files])
@@ -286,7 +322,7 @@ class MusicPlayer:
                     self.playlist.insert(tk.END, f"{songtracks[0]}/{track}")
 
         else:
-            os.chdir(f"C:/Users/Tengwei/Desktop/Music/{user_choice}")
+            os.chdir(f"./{user_choice}")
             songtracks = os.listdir()
             sorted_songtracks = sorted(songtracks, key=musictracker.get_music_score, reverse=True)  # This doesn't work
             print(sorted_songtracks)
@@ -303,6 +339,7 @@ class MusicPlayer:
         # elif autoplay_music == 3:
         #     pass
 
+    # Plays a song, or unpauses a song
     def playsong(self, song_index):
         # Checking if the song is paused or not first
         if self.status.get() == "-Paused":
@@ -334,6 +371,7 @@ class MusicPlayer:
         self._calibrate_videoslider(song_length=song_length // 1000)
         print(autoplay_music)
 
+        # These are the 4 possible modes available for the user
         def autoplay(songindex):
             if not self.check_if_finished():
                 self.playlist.after(1000, lambda: autoplay(songindex))
