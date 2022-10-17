@@ -1,27 +1,18 @@
+"""A mini spotify that works offline, that can play audio files in a folder continuously. Scroll function present.
+Unlike other Python tkinter music players, this allows multithreading so I can play a song on repeat and still
+interact with the music player. This is the unique part of this project: the ability to interact with the player
+while playing the songs on repeat."""
+
 import os
 import pyinputplus as pyip
-import shutil
 import time
 import threading
 from mttkinter import mtTkinter as tk
 import random
 import pygame
-import sqlite3
-
 import ytdownloader
 import musicconverter
 import musictracker
-
-# A lot of old code from the old musicplayer that I never bothered erasing
-
-"""Basically, this is supposed to be like a mini spotify. It's supposed to shuffle audio files in a folder, 
-then play them to me in a random order. After one is over, the next one should play. Though I fail to see how I can do 
-that."""
-
-"""This will probably be the most complicated one, because there needs to be a way to seamslessly add songs, and that 
-may be difficult. And of course sort the songs. That presents its own challenges: I need to use some algorithm 
-to rate my songs for myself. For example: Every listen is +1, and the higher the rating, the higher the chance of 
-appearing first? And you also need a function where you can choose the song order."""
 
 
 def main():
@@ -112,16 +103,6 @@ def change_autoplay_bool():
             time.sleep(1)
 
 
-# Function that moves downloaded audio files to appropriate folder to add songs
-def move_music_files(folder_name):
-    backdated_time = time.time() - 3600
-    os.chdir('C:/Users/Tengwei/Downloads')
-    for file in os.listdir('.'):
-        if file.endswith('.mp3') and os.path.getctime(file) >= backdated_time:
-            print(file)
-            shutil.move(f"C:/Users/Tengwei/Downloads/{file}", f"C:/Users/Tengwei/Desktop/Music/{folder_name}/{file}")
-
-
 class MusicMenu:
 
     def __init__(self, root):
@@ -162,9 +143,7 @@ class MusicMenu:
         scrollbar_y.config(command=self.genreslist.yview)
         self.genreslist.pack(fill=tk.BOTH)
 
-        os.chdir(f"C:/Users/Tengwei/Desktop/Music")
-
-        genres_list = [genre for genre in os.listdir() if os.path.isdir(genre)]
+        genres_list = [genre for genre in os.listdir('./audios') if os.path.isdir(genre)]
         for genre in genres_list:
             self.genreslist.insert(tk.END, genre)
 
@@ -214,6 +193,8 @@ class MusicMenu:
         audio_filenames = musicconverter.convert_all_videos_to_audios(input_dir='./tempvideos',
                                                                       output_dir=f'./audios/{user_choice_folder}')
 
+        # Change back to current working directory
+        os.chdir('../..')
         # Checks if user wants to delete video files
         delete_choice = pyip.inputYesNo("Do you want to delete the video files?")
         if delete_choice == 'yes':
@@ -330,14 +311,6 @@ class MusicPlayer:
                 self.playlist.insert(tk.END, track)
 
         self.playlist.after(200, self._setvolume)
-        # # Checking which mode the musicplayer should be in
-        # if autoplay_music == 1:
-        #     self.playsong(self.playlist.get(0))
-        # elif autoplay_music == 2:
-        #     if self.paused:
-        #         self.playsong(self.playlist.curselection()[0])
-        # elif autoplay_music == 3:
-        #     pass
 
     # Plays a song, or unpauses a song
     def playsong(self, song_index):
@@ -408,6 +381,7 @@ class MusicPlayer:
 
         self.playlist.after(1000, possible_functions[autoplay_music])
 
+    # Pauses the song
     def pausesong(self):
         # Displaying Status
         self.status.set("-Paused")
@@ -416,6 +390,7 @@ class MusicPlayer:
         # Paused Song
         pygame.mixer.music.pause()
 
+    # Returns to the main menu
     def return_to_menu(self):
         global started_player
         global loop_enter
@@ -426,16 +401,15 @@ class MusicPlayer:
         musicMenu = MusicMenu(new_root)
         new_root.mainloop()
 
+    # Closes the music player
     def close_player(self):
         pygame.mixer.music.stop()
         self.root.destroy()
 
+    # Check if the music finished playing
     def check_if_finished(self):
         # Check if the music is playing
-        if self.paused or pygame.mixer.music.get_busy():
-            return False
-        else:
-            return True
+        return not (self.paused or pygame.mixer.music.get_busy())
 
     def _setvolume(self):
         volume = self.slider.get() / 100

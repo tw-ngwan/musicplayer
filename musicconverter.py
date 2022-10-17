@@ -68,9 +68,9 @@ def convert_all_videos_to_audios(input_dir: str = '.', output_dir: str = ''):
 
 # Deletes all video files in directory
 def delete_video_files(dir='.'):
-    video_files = [file for file in os.listdir('.') if file.endswith('.mp4')]
+    video_files = [file for file in os.listdir(dir) if file.endswith('.mp4')]
     for file in video_files:
-        os.remove(file)
+        os.remove(f'{dir}/{file}')
     print("All video files deleted")
 
 
