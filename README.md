@@ -6,6 +6,11 @@ This is done using a multi-thread safe tkinter module, that enables
 the user to indicate their preferences while tkinter is open, and 
 the music is playing. 
 
+I started work on this Music Player in Dec 2021, because I knew that 
+I would be going to Germany for an attachment for 2 months, where WiFi 
+was scarce. I wanted to be able to continue listening to my favourite music 
+when I was overseas, therefore, I created the first iteration of this player. 
+
 There are 4 modes to the music player: Normal, Progressive, Repeat, 
 and Random. 
 
