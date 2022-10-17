@@ -307,9 +307,9 @@ class MusicPlayer:
 
         else:
             songtracks = os.listdir(f"./audios/{user_choice}")
-            print(songtracks)
+            # print(songtracks)
             sorted_songtracks = sorted(songtracks, key=musictracker.get_music_score, reverse=True)  # This doesn't work
-            print(sorted_songtracks)
+            # print(sorted_songtracks)
             for track in sorted_songtracks:
                 self.playlist.insert(tk.END, track)
 
