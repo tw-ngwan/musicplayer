@@ -32,7 +32,21 @@ Some of the challenges I faced:
 It was quite hard to implement the thread-safe user-preference 
 changes, without the music player hanging. Therefore, I had to 
 replace the use of traditional tkinter with mttkinter, that 
-enables the user to indicate their preferences on the Command Line 
+enables the user to indicate their preferences on the Command Line
+while still not affecting the music player 
+
+Interactivity: Adding the volume slider and duration slider 
+similarly required thread-safe changes. 
+
+Adding song functionality: I had to navigate between different 
+directories and tackle all of them to ensure that the videos went to
+the right places.
+Also, because moviepy's resource release is not the best, I had to
+create a Process to process the creating of the audio clip, before
+deleting the video file. 
+
+
+Enjoy! 
 
 
 
