@@ -190,12 +190,14 @@ class MusicMenu:
         choice_folder = pyip.inputInt(add_to_folder_instructions, min=1, max=len(music_genres)) - 1
         user_choice_folder = music_genres[choice_folder]
 
+        print(os.getcwd())
         # Converts all videos to audios
         audio_filenames = musicconverter.convert_all_videos_to_audios(input_dir='./tempvideos',
                                                                       output_dir=f'./audios/{user_choice_folder}')
 
         # Change back to current working directory
-        os.chdir('../..')
+        # os.chdir('../..')
+        print(os.getcwd())
         # Checks if user wants to delete video files
         delete_choice = pyip.inputYesNo("Do you want to delete the video files?")
         if delete_choice == 'yes':

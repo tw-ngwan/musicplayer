@@ -1,10 +1,12 @@
 import os
 import sys
+import time
 import pyinputplus as pyip
 from moviepy.editor import VideoFileClip
 import sqlite3
 from backend_implementations import input_parse
 from settings import musicconverter_usage, database_name
+from multiprocessing import Process
 
 
 # The main function that is called
@@ -39,13 +41,22 @@ def main():
 
 # Converts a video file to audio file
 def convert_video_to_audio(video_file: str, output_ext: str = "mp3", input_dir: str = '.', output_dir: str = '.'):
+    converter = Process(target=convert_audio_to_video_proc, args=(video_file, output_ext, input_dir, output_dir))
+    converter.start()
+    converter.join()
+
+
+def convert_audio_to_video_proc(video_file: str, output_ext: str = "mp3", input_dir: str = '.', output_dir: str = '.'):
+    current_directory = os.getcwd()
     os.chdir(input_dir)
     filename, ext = os.path.splitext(video_file)
-    clip = VideoFileClip(video_file)
-    # Saves file to a new directory
-    os.chdir(output_dir)
-    audio_filename = f"{filename}.{output_ext}"
-    clip.audio.write_audiofile(audio_filename)
+    with VideoFileClip(video_file) as clip:
+        # Saves file to a new directory
+        os.chdir(current_directory)
+        os.chdir(output_dir)
+        audio_filename = f"{filename}.{output_ext}"
+        clip.audio.write_audiofile(audio_filename)
+        clip.close()
     return audio_filename
 
 
@@ -55,11 +66,13 @@ def convert_all_videos_to_audios(input_dir: str = '.', output_dir: str = ''):
     if output_dir == '':
         output_dir = input_dir
 
-    video_files = [file for file in os.listdir('.') if file.endswith('.mp4')]
+    video_files = [file for file in os.listdir(input_dir) if file.endswith('.mp4')]
     audio_filenames = []
     # Converts all video files
     for file in video_files:
-        audio_file = convert_video_to_audio(file, input_dir=input_dir, output_dir=output_dir)
+        convert_video_to_audio(file, input_dir=input_dir, output_dir=output_dir)
+        filename, ext = os.path.splitext(file)
+        audio_file = f"{filename}.mp3"
         audio_filenames.append(audio_file)
 
     print("ALl video files converted")

@@ -48,7 +48,7 @@ def download_all_videos(urls: list[str], outpath: str="./"):
 def download_video(url: str, outpath: str="./"):
     yt = YouTube(url)
     try:
-        yt.streams.filter(file_extension="mp4").get_by_resolution("240p").download(outpath)
+        yt.streams.filter(file_extension="mp4").get_by_resolution("360p").download(outpath)
     except RegexMatchError:
         print(f"{url} video not found!")
         return
